@@ -37,7 +37,7 @@ begin
     clk_process: process begin clk_tb <= not clk_tb; wait for CLK_PERIOD / 2; end process;
 
     -- =========================================================================
-    -- SCÉNARIO DE TEST CORRIGÉ
+    -- SCÉNARIO DE TEST CORRIGÉ test
     -- =========================================================================
     stim_proc: process
     begin
@@ -93,5 +93,6 @@ begin
         report "--- TOUS LES TESTS ONT REUSSI ---" severity note;
         wait;
     end process;
+
 
 end architecture Behavioral;
