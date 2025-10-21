@@ -2,10 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity tb_simon_simple is
-end entity tb_simon_simple;
+entity tb_simon is
+end entity;
 
-architecture test of tb_simon_simple is
+architecture test of tb_simon is
 
     -- 1. Déclaration du composant à tester (DUT)
     component simon is
@@ -175,5 +175,6 @@ begin
         report "--- Fin du testbench SIMPLIFIE ---";
         wait;
     end process stim_proc;
+
 
 end architecture test;
