@@ -1,10 +1,10 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
-entity mode_controller_tb is
-end entity mode_controller_tb;
+entity tb_mode_controller is
+end entity;
 
-architecture Behavioral of mode_controller_tb is
+architecture Behavioral of tb_mode_controller is
 
     -- === Composant à tester (DUT) ===
     component mode_controller
@@ -92,3 +92,4 @@ begin
     end process;
 
 end architecture Behavioral;
+
