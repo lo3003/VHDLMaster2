@@ -73,8 +73,6 @@ begin
 					 else
 						timer <= timer - 1;
 					 end if;
-				elsif valid = '1' then
-					valid <= '0';
 			   end if;
 		  end if;
     end process;
