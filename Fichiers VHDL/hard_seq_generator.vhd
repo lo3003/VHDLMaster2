@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity hard_seq_generator is
-    generic ( N_MAX : integer := 5 );
+    generic ( N_MAX : integer := 10 );
     Port (
         clk				: in  std_logic;
 		  reset			: in  std_logic;
@@ -25,7 +25,12 @@ architecture rtl of hard_seq_generator is
         to_unsigned(1, 4),  
         to_unsigned(2, 4),
         to_unsigned(8, 4),
-        to_unsigned(9, 4)
+        to_unsigned(9, 4),
+		  to_unsigned(1, 4),  
+        to_unsigned(2, 4),  
+        to_unsigned(3, 4),
+        to_unsigned(7, 4),
+        to_unsigned(8, 4)
     );
     
 begin
