@@ -2,10 +2,10 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
-entity score_mem_tb is
-end entity score_mem_tb;
+entity tb_score_mem is
+end entity;
 
-architecture Behavioral of score_mem_tb is
+architecture Behavioral of tb_score_mem is
 
     -- === Composant à tester (DUT) ===
     component score_mem
@@ -94,3 +94,4 @@ begin
     end process;
 
 end architecture Behavioral;
+
