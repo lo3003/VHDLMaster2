@@ -72,7 +72,7 @@ begin
     -- =========================================================================
     process(clk, reset)
     begin
-        if reset = '0' then
+        if reset = '1' then
             state         <= S_IDLE;
             current_step  <= (others => '0');
             current_index <= (others => '0');
