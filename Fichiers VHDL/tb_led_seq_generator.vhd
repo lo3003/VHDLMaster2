@@ -2,10 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity led_seq_generator_tb is
+entity tb_led_seq_generator is
 end entity;
 
-architecture test of led_seq_generator_tb is
+architecture test of tb_led_seq_generator is
 
     -- 1. Déclaration du composant à tester (DUT) mise à jour
     component led_seq_generator is
@@ -102,3 +102,4 @@ begin
         wait; -- Stoppe la simulation
     end process;
 end architecture;
+
