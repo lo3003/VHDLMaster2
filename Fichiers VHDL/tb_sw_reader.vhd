@@ -1,104 +1,97 @@
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
-entity led_seq_generator_tb is
+entity tb_sw_reader is
 end entity;
 
-architecture test of led_seq_generator_tb is
+architecture Behavioral of tb_sw_reader is
 
-    -- 1. Déclaration du composant à tester (DUT) mise à jour
-    component led_seq_generator is
+    component sw_reader
         Port (
             clk          : in  std_logic;
             reset        : in  std_logic;
-            show_command : in  std_logic;
-            seq_value    : in  unsigned(3 downto 0);
-            on_off_times : in  std_logic_vector(9 downto 0);
-            show_valid   : out std_logic;
-            led_o        : out std_logic_vector(9 downto 0)
+            read_command : in  std_logic;
+            sw_i         : in  std_logic_vector(9 downto 0);
+            read_valid   : out std_logic;
+            sw_index     : out unsigned(3 downto 0)
         );
     end component;
 
-    -- 2. Signaux pour connecter au DUT (mis à jour)
-    signal tb_clk          : std_logic := '0';
-    signal tb_reset        : std_logic := '0';
-    signal tb_show_command : std_logic := '0';
-    signal tb_seq_value    : unsigned(3 downto 0) := (others => '0');
-    signal tb_on_off_times : std_logic_vector(9 downto 0) := (others => '0');
-    signal tb_show_valid   : std_logic;
-    signal tb_led_o        : std_logic_vector(9 downto 0);
+    signal clk_tb          : std_logic := '0';
+    signal reset_tb        : std_logic := '0';
+    signal read_command_tb : std_logic := '0';
+    signal sw_i_tb         : std_logic_vector(9 downto 0) := (others => '0');
+    signal read_valid_tb   : std_logic;
+    signal sw_index_tb     : unsigned(3 downto 0);
 
-    -- Constantes pour la simulation
-    constant CLK_PERIOD : time := 20 ns; -- Période pour 50 MHz
+    constant CLK_PERIOD : time := 20 ns;
 
 begin
-
-    -- 3. Instanciation du DUT (mise à jour)
-    uut: led_seq_generator
+    uut: sw_reader
         port map (
-            clk          => tb_clk,
-            reset        => tb_reset,
-            show_command => tb_show_command,
-            seq_value    => tb_seq_value,
-            on_off_times => tb_on_off_times,
-            show_valid   => tb_show_valid,
-            led_o        => tb_led_o
+            clk => clk_tb, reset => reset_tb, read_command => read_command_tb,
+            sw_i => sw_i_tb, read_valid => read_valid_tb, sw_index => sw_index_tb
         );
 
-    -- 4. Processus de génération de l'horloge
-    clk_process: process
+    clk_process: process begin clk_tb <= not clk_tb; wait for CLK_PERIOD / 2; end process;
+
+    -- =========================================================================
+    -- SCÉNARIO DE TEST CORRIGÉ
+    -- =========================================================================
+    stim_proc: process
     begin
-        tb_clk <= '0';
-        wait for CLK_PERIOD / 2;
-        tb_clk <= '1';
-        wait for CLK_PERIOD / 2;
+        report "--- Debut du testbench corrige pour sw_reader ---";
+        
+        -- Test 1: Reset.
+        report "Test 1: Verification du reset.";
+        reset_tb <= '1'; wait for 100 ns; reset_tb <= '0'; wait for 20 ns;
+        assert sw_index_tb = "0000" and read_valid_tb = '0' report "ERREUR Test 1" severity error;
+        report "Test 1: OK.";
+
+        -- Test 2: Lecture de SW2. Index attendu: 2 ("0010").
+        report "Test 2: Lecture de SW2.";
+        sw_i_tb <= "0000000100"; -- 1. On prépare l'entrée
+        wait for CLK_PERIOD;    -- 2. On attend 1 cycle pour que le DUT voie le changement
+        
+        read_command_tb <= '1'; -- 3. On envoie la commande
+        wait for CLK_PERIOD;
+        read_command_tb <= '0';
+        
+        wait for CLK_PERIOD;
+        assert sw_index_tb = "0010" and read_valid_tb = '1' 
+            report "ERREUR Test 2: L'index pour SW2 est incorrect." severity error;
+        
+        wait for CLK_PERIOD;
+        assert read_valid_tb = '0' 
+            report "ERREUR Test 2: read_valid n'est pas une impulsion." severity error;
+        report "Test 2: OK.";
+
+        -- Test 3: Lecture de SW9. Index attendu: 9 ("1001").
+        report "Test 3: Lecture de SW9.";
+        sw_i_tb <= "1000000000"; -- 1. On prépare l'entrée
+        wait for CLK_PERIOD;    -- 2. On attend
+        
+        read_command_tb <= '1'; -- 3. On envoie la commande
+        wait for CLK_PERIOD;
+        read_command_tb <= '0';
+        wait for CLK_PERIOD;
+        
+        assert sw_index_tb = "1001" and read_valid_tb = '1' 
+            report "ERREUR Test 3: L'index pour SW9 est incorrect." severity error;
+        report "Test 3: OK.";
+        
+        -- Test 4: Pas de commande. La sortie ne doit pas changer.
+        report "Test 4: Changement de SW sans commande.";
+        sw_i_tb <= "0000000001";
+        wait for 100 ns;
+        
+        assert sw_index_tb = "1001" 
+            report "ERREUR Test 4: L'index a change sans commande." severity error;
+        report "Test 4: OK.";
+
+        report "--- TOUS LES TESTS ONT REUSSI ---" severity note;
+        wait;
     end process;
 
-    -- 5. Processus de stimulation
-    stimulus_process: process
-    begin
-        report "Début de la simulation du led_seq_generator." severity note;
-
-        -- **SCENARIO 1: Reset et état initial**
-        report "TEST 1: Reset et module désactivé." severity note;
-        tb_reset <= '0';
-        tb_show_command <= '0';
-        wait for 100 ns; -- Maintenir le reset actif
-        tb_reset <= '1';
-        wait for CLK_PERIOD;
-        
-        -- On vérifie que les LEDs sont bien éteintes après le reset
-        assert tb_led_o = "0000000000" report "ERREUR TEST 1: Les LEDs ne sont pas éteintes après le reset." severity error;
-
-        -- **SCENARIO 2: Allumage simple (300ms ON / 200ms OFF)**
-        report "TEST 2: Allumage de la LED 5 (300ms ON / 200ms OFF)." severity note;
-        
-        -- Configuration:
-        -- Temps ON = 1 (1 * 100ms), Temps OFF = 1 (1 * 100ms)
-        tb_on_off_times <= std_logic_vector(to_unsigned(2, 5)) & -- on_off_times(9 downto 5) = OFF
-                           std_logic_vector(to_unsigned(2, 5)); -- on_off_times(4 downto 0) = ON
-        tb_seq_value    <= to_unsigned(5, 4); -- LED à allumer
-        
-        -- On active le module
-        tb_show_command <= '1';
-        wait for CLK_PERIOD; -- Laisser le temps à la commande d'être prise en compte
-
-        -- Vérification de l'allumage
-        wait for 50 ms; -- On attend un peu pour être sûr d'être dans l'état ON
-        assert tb_led_o = "0000100000" report "ERREUR TEST 2: La LED 5 ne s'est pas allumée." severity error;
-
-        -- Attendre la fin de la période ON et vérifier l'extinction
-        wait for 50 ms; -- On complète les 300 ms
-        wait for CLK_PERIOD;
-        assert tb_led_o = "0000000000" report "ERREUR TEST 2: La LED 5 ne s'est pas éteinte." severity error;
-        
-        -- Attendre la fin de la période OFF et vérifier le ré-allumage
-        wait for 100 ms; -- On attend les 200 ms
-        wait for CLK_PERIOD;
-        assert tb_led_o = "0000100000" report "ERREUR TEST 2: La LED 5 ne s'est pas rallumée." severity error;
-        
-        report "Fin de la simulation." severity note;
-        wait; -- Stoppe la simulation
-    end process;
-end architecture;
+end architecture Behavioral;
