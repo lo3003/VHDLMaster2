@@ -14,9 +14,9 @@ entity level_controller is
     Port (
         clk         : in  std_logic;
         reset       : in  std_logic;
-        level_pulse : in  std_logic; -- Impulsion d'un cycle provenant du bouton
+        level_command : in  std_logic; -- Impulsion d'un cycle provenant du bouton
         level       : out unsigned(1 downto 0);
-        cfg_times   : out std_logic_vector(31 downto 0)
+        on_off_times   : out std_logic_vector(9 downto 0)
     );
 end entity level_controller;
 
@@ -24,11 +24,11 @@ architecture Behavioral of level_controller is
 
     -- Constantes pour les durées en cycles d'horloge (basé sur une clk de 50 MHz)
     -- Facile: 0.5s = 25,000,000 cycles
-    constant EASY_TIME   : natural := 100000000;
+    constant EASY_TIME   : natural := 10;
     -- Moyen: 0.25s = 12,500,000 cycles
-    constant MEDIUM_TIME : natural := 50000000;
+    constant MEDIUM_TIME : natural := 5;
     -- Difficile: 0.1s = 5,000,000 cycles
-    constant HARD_TIME   : natural := 25000000;
+    constant HARD_TIME   : natural := 2;
 
     -- Signal interne pour mémoriser le niveau actuel
     signal level_reg : unsigned(1 downto 0) := "00"; -- "00"=Facile, "01"=Moyen, "10"=Difficile
@@ -64,10 +64,10 @@ begin
     timing_generation_process: process(level_reg)
     begin
         case level_reg is
-            when "00"   => cfg_times <= std_logic_vector(to_unsigned(EASY_TIME, 32));
-            when "01"   => cfg_times <= std_logic_vector(to_unsigned(MEDIUM_TIME, 32));
-            when "10"   => cfg_times <= std_logic_vector(to_unsigned(HARD_TIME, 32));
-            when others => cfg_times <= std_logic_vector(to_unsigned(EASY_TIME, 32));
+            when "00"   => on_off_times <= std_logic_vector(to_unsigned(EASY_TIME, 10));
+            when "01"   => on_off_times <= std_logic_vector(to_unsigned(MEDIUM_TIME, 10));
+            when "10"   => on_off_times <= std_logic_vector(to_unsigned(HARD_TIME, 10));
+            when others => on_off_times <= std_logic_vector(to_unsigned(EASY_TIME, 10));
         end case;
     end process timing_generation_process;
 
