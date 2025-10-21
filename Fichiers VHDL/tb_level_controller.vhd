@@ -2,10 +2,10 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
-entity level_controller_tb is
-end entity level_controller_tb;
+entity tb_level_controller is
+end entity;
 
-architecture Behavioral of level_controller_tb is
+architecture Behavioral of tb_level_controller is
 
     -- === Composant à tester (DUT) ===
     component level_controller
@@ -101,3 +101,4 @@ begin
     end process;
 
 end architecture Behavioral;
+
