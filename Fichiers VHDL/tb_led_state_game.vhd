@@ -11,7 +11,7 @@ use IEEE.NUMERIC_STD.ALL;
 entity tb_led_game_state is
 end entity tb_led_game_state;
 
-architecture Behavioral of led_game_state_tb is
+architecture Behavioral of tb_led_game_state is
 
     -- === Component Under Test (DUT) ===
     component led_game_state
