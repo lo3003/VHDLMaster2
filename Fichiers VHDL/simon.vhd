@@ -2,11 +2,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
--- =============================================================================
--- ENTITY: simon (Top-Level)
--- DESCRIPTION: Module principal pour le jeu Simon sur la carte DE0-CV.
---              Interconnecte tous les sous-modules.
--- =============================================================================
 entity simon is
     Port (
         -- Horloge et Reset
@@ -34,7 +29,6 @@ architecture structural of simon is
     -- Déclarations des Composants
     -- =========================================================================
 
-    -- *** AJOUT DE LA DÉCLARATION DU DEBOUNCER ***
     component debouncer is
         generic (
             CLK_FREQ_HZ   : natural := 50_000_000;
@@ -45,6 +39,21 @@ architecture structural of simon is
             reset      : in  std_logic;
             btn_in     : in  std_logic;
             btn_pulse  : out std_logic
+        );
+    end component;
+    
+    -- --- AJOUT 1/3 : Déclaration du nouveau composant switch_debouncer ---
+    component switch_debouncer is
+        generic (
+            WIDTH         : natural := 10;
+            CLK_FREQ_HZ   : natural := 50_000_000;
+            DEBOUNCE_MS   : natural := 10
+        );
+        Port (
+            clk        : in  std_logic;
+            reset      : in  std_logic;
+            sw_in      : in  std_logic_vector(WIDTH-1 downto 0);
+            sw_out     : out std_logic_vector(WIDTH-1 downto 0)
         );
     end component;
 
@@ -144,7 +153,7 @@ architecture structural of simon is
         );
     end component;
 
-    -- (Signaux Internes d'Interconnexion inchangés)
+    -- Signaux Internes d'Interconnexion
     signal reset_int, start_pulse_sync, valid_pulse_sync, level_pulse_sync, mode_pulse_sync : std_logic;
     signal send_command, show_command, read_command, latch_command, compare_command, score_command, level_command, mode_command, led_game_command : std_logic;
     signal index_ctrl, step_ctrl : unsigned(3 downto 0);
@@ -159,24 +168,32 @@ architecture structural of simon is
     signal led_o_seq, led_o_game : std_logic_vector(9 downto 0);
     signal animation_active : std_logic := '0';
 
+    -- --- AJOUT 2/3 : Signal pour la sortie "propre" du debouncer ---
+    signal sw_debounced : std_logic_vector(9 downto 0);
+
 begin
 
     reset_int <= not RESET_N;
     
-    -- *** MODIFIÉ : Connexions directes remplacées par des debouncers ***
     debounce_start_inst : debouncer
         port map ( clk => CLOCK_50, reset => reset_int, btn_in => KEY(0), btn_pulse => start_pulse_sync );
-
     debounce_valid_inst : debouncer
         port map ( clk => CLOCK_50, reset => reset_int, btn_in => KEY(1), btn_pulse => valid_pulse_sync );
-
     debounce_level_inst : debouncer
         port map ( clk => CLOCK_50, reset => reset_int, btn_in => KEY(2), btn_pulse => level_pulse_sync );
-
     debounce_mode_inst : debouncer
         port map ( clk => CLOCK_50, reset => reset_int, btn_in => KEY(3), btn_pulse => mode_pulse_sync );
 
-    -- (Le reste des instanciations est inchangé)
+    -- --- AJOUT 3/3 : Instanciation du debouncer pour les switches ---
+    sw_debounce_inst : switch_debouncer
+        generic map ( WIDTH => 10 )
+        port map (
+            clk     => CLOCK_50,
+            reset   => reset_int,
+            sw_in   => SW,            -- Entrée brute de la carte
+            sw_out  => sw_debounced   -- Sortie "propre" et stable
+        );
+
     controller_inst : simon_controller
         port map (
             clk => CLOCK_50, reset => reset_int, start_pulse => start_pulse_sync, valid_pulse => valid_pulse_sync,
@@ -189,26 +206,28 @@ begin
             led_game_command => led_game_command, index => index_ctrl, step => step_ctrl,
             score_o => score_ctrl, game_over_o => game_over_ctrl
         );
-
+        
     hard_seq_inst : hard_seq_generator
         port map (
             clk => CLOCK_50, reset => reset_int, send_command => send_command,
             index => index_ctrl, send_valid => send_valid, value_o => seq_value
         );
-
+        
     led_driver_inst : led_seq_generator
         port map (
             clk => CLOCK_50, reset => reset_int, show_command => show_command,
             seq_value => seq_value, on_off_times => level_on_off_times,
             show_valid => show_valid, led_o => led_o_seq
         );
-
+        
+    -- --- MODIFICATION : Le sw_reader utilise maintenant le signal débouncé ---
     sw_reader_inst : sw_reader
         port map (
             clk => CLOCK_50, reset => reset_int, read_command => read_command,
-            sw_i => SW, read_valid => read_valid, sw_index => sw_index
+            sw_i => sw_debounced, -- <<-- MODIFICATION ICI
+            read_valid => read_valid, sw_index => sw_index
         );
-
+        
     comparator_inst : sw_seq_comparator
         port map (
             clk => CLOCK_50, reset => reset_int, latch_command => latch_command,
@@ -216,38 +235,38 @@ begin
             compare_command => compare_command, sw_index => sw_index,
             compare_valid => compare_valid, match_error => match_error
         );
-
+        
     level_ctrl_inst : level_controller
         port map (
             clk => CLOCK_50, reset => reset_int, level_command => level_command,
             level => current_level, on_off_times => level_on_off_times
         );
-
+        
     mode_ctrl_inst : mode_controller
         port map (
             clk => CLOCK_50, reset => reset_int, mode_command => mode_command,
             mode => current_mode
         );
-
+        
     score_mem_inst : score_mem
         port map (
             clk => CLOCK_50, reset => reset_int, score_command => score_command,
             score => score_ctrl, best_o => best_score
         );
-
+        
     hex_driver_inst : hex_driver
         port map (
             score => score_ctrl, best_score => best_score, level => current_level,
             mode => current_mode, HEX5 => HEX5, HEX4 => HEX4, HEX3 => HEX3,
             HEX2 => HEX2, HEX1 => HEX1, HEX0 => HEX0
         );
-
+        
     led_game_inst : led_game_state
         port map (
             clk => CLOCK_50, reset => reset_int, led_game_command => led_game_command,
             game_over => game_over_ctrl, led_o => led_o_game, led_game_valid => led_game_valid
         );
-
+        
     -- Logique de sortie LED (multiplexage)
     animation_fsm_process: process(CLOCK_50, reset_int)
     begin
