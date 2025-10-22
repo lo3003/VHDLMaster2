@@ -2,81 +2,101 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+-- =============================================================================
+-- ENTITY: led_seq_generator
+-- DESCRIPTION: Version finale et robuste. Gère le clignotement d'une LED
+--              (un cycle ON puis OFF) en utilisant une méthode de comptage
+--              fiable pour la synthèse matérielle.
+-- =============================================================================
 entity led_seq_generator is
     Port (
-        clk       	: in  std_logic;
-		  reset			: in  std_logic;
+        clk          : in  std_logic;
+        reset        : in  std_logic;
         show_command : in  std_logic;
-        seq_value 	: in  unsigned(3 downto 0);
+        seq_value    : in  unsigned(3 downto 0);
         on_off_times : in  std_logic_vector(9 downto 0);
-		  show_valid 	: out  std_logic;
-        led_o     	: out std_logic_vector(9 downto 0)
+        show_valid   : out std_logic;
+        led_o        : out std_logic_vector(9 downto 0)
     );
 end entity;
 
 architecture rtl of led_seq_generator is
-    type state_type is (st_off, st_on);
-    signal state : state_type;
 
-    signal prescaler : unsigned(22 downto 0);  -- Compteur pour 100 ms (0 à 4999999)
-    signal tick : std_logic := '0';
+    -- États de la machine pour gérer le cycle de clignotement
+    type state_type is (S_IDLE, S_ON, S_OFF);
+    signal state : state_type := S_IDLE;
 
-    signal timer : unsigned(4 downto 0);  -- Compteur par pas de 100 ms pour ON/OFF
-	 
-	 signal valid : std_logic := '0';
-	 
-	 signal st_counter : unsigned(1 downto 0);
+    -- Compteur rapide (prescaler) pour générer un "tick" toutes les 100ms
+    constant TICKS_100MS : natural := 5_000_000; -- 50MHz / 10
+    signal prescaler_cnt : natural range 0 to TICKS_100MS - 1;
 
-    constant CLK_FREQ : positive := 50000000;  -- 50 MHz
-    constant MS_DIV : positive := CLK_FREQ / 10;  -- 5000000 pour 100 ms
+    -- Compteur lent qui compte les "ticks" de 100ms
+    signal tick_cnt : unsigned(4 downto 0);
 
 begin
-    process(clk,reset)
-    begin
-		  if reset = '1' or show_command = '0' then
-				state <= st_off;
-            timer <= (others => '0');
-				prescaler <= to_unsigned(4999999,23); -- Compteur initialisé à 4999999 afin de trigger immédiatement un tick
-				valid <= '0';
-				st_counter <= to_unsigned(0,2);
-            led_o <= (others => '0');
-        elsif rising_edge(clk) and show_command = '1' then
-            -- Prescaler pour générer un tick toutes les 100 ms
-            if prescaler = MS_DIV - 1 then
-                prescaler <= (others => '0');
-                tick <= '1';
-            else
-                prescaler <= prescaler + 1;
-                tick <= '0';
-            end if;
 
-            -- Gestion de l'état et du clignotement
-				if tick = '1' then
-					 if timer = 0 then
-						case state is
-							 when st_on =>
-								   state <= st_off;
-								   timer <= unsigned(on_off_times(9 downto 5)) - 1;  -- Chargement OFF_0.1s
-								   led_o <= (others => '0');
-							 when st_off =>
-								   state <= st_on;
-									st_counter <= to_unsigned(1,2);
-								   timer <= unsigned(on_off_times(4 downto 0)) - 1;  -- Chargement ON_0.1s
-								   led_o <= (others => '0');
-									if st_counter = to_unsigned(1,2) then
-										valid <= '1';
-										st_counter <= to_unsigned(0,2);
-								   elsif to_integer(seq_value) < 10 then  -- Sécurité
-										led_o(to_integer(seq_value)) <= '1';
-									end if;
-					   end case;
-					 else
-						timer <= timer - 1;
-					 end if;
-			   end if;
-		  end if;
-    end process;
-	 
-	 show_valid <= valid;
-	 
-end architecture;
+    main_proc: process(clk)
+    begin
+        if rising_edge(clk) then
+            if reset = '1' then
+                state         <= S_IDLE;
+                prescaler_cnt <= 0;
+                tick_cnt      <= (others => '0');
+                led_o         <= (others => '0');
+                show_valid    <= '0';
+            else
+                -- La sortie 'show_valid' est une impulsion, on la remet à '0' par défaut
+                show_valid <= '0';
+
+                case state is
+                    
+                    -- ETAT 1: Attend la commande de démarrage
+                    when S_IDLE =>
+                        led_o <= (others => '0');
+                        if show_command = '1' then
+                            state         <= S_ON;
+                            prescaler_cnt <= 0;
+                            tick_cnt      <= (others => '0');
+                            -- Allumer la LED immédiatement
+                            if to_integer(seq_value) < 10 then
+                                led_o(to_integer(seq_value)) <= '1';
+                            end if;
+                        end if;
+
+                    -- ETAT 2: Période ON (LED allumée)
+                    when S_ON =>
+                        if prescaler_cnt = TICKS_100MS - 1 then
+                            prescaler_cnt <= 0;
+                            if tick_cnt = unsigned(on_off_times(4 downto 0)) - 1 then
+                                -- Fin de la période ON
+                                state    <= S_OFF;
+                                tick_cnt <= (others => '0');
+                                led_o    <= (others => '0'); -- Eteindre la LED
+                            else
+                                tick_cnt <= tick_cnt + 1;
+                            end if;
+                        else
+                            prescaler_cnt <= prescaler_cnt + 1;
+                        end if;
+                        
+                    -- ETAT 3: Période OFF (LED éteinte)
+                    when S_OFF =>
+                        if prescaler_cnt = TICKS_100MS - 1 then
+                            prescaler_cnt <= 0;
+                            if tick_cnt = unsigned(on_off_times(9 downto 5)) - 1 then
+                                -- Fin de la période OFF, cycle terminé
+                                state      <= S_IDLE;
+                                show_valid <= '1'; -- Envoyer l'impulsion de validation !
+                            else
+                                tick_cnt <= tick_cnt + 1;
+                            end if;
+                        else
+                            prescaler_cnt <= prescaler_cnt + 1;
+                        end if;
+
+                end case;
+            end if;
+        end if;
+    end process main_proc;
+
+end architecture rtl;
