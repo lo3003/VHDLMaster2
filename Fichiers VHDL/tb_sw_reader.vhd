@@ -3,7 +3,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 entity tb_sw_reader is
-end entity;
+end entity tb_sw_reader;
 
 architecture Behavioral of tb_sw_reader is
 
@@ -37,11 +37,11 @@ begin
     clk_process: process begin clk_tb <= not clk_tb; wait for CLK_PERIOD / 2; end process;
 
     -- =========================================================================
-    -- SCÉNARIO DE TEST CORRIGÉ
+    -- SCÉNARIO DE TEST COMPLET
     -- =========================================================================
     stim_proc: process
     begin
-        report "--- Debut du testbench corrige pour sw_reader ---";
+        report "--- Debut du testbench complet pour sw_reader ---";
         
         -- Test 1: Reset.
         report "Test 1: Verification du reset.";
@@ -49,46 +49,57 @@ begin
         assert sw_index_tb = "0000" and read_valid_tb = '0' report "ERREUR Test 1" severity error;
         report "Test 1: OK.";
 
-        -- Test 2: Lecture de SW2. Index attendu: 2 ("0010").
+        -- Test 2: Lecture de SW2 (cas valide).
         report "Test 2: Lecture de SW2.";
-        sw_i_tb <= "0000000100"; -- 1. On prépare l'entrée
-        wait for CLK_PERIOD;    -- 2. On attend 1 cycle pour que le DUT voie le changement
-        
-        read_command_tb <= '1'; -- 3. On envoie la commande
+        sw_i_tb <= "0000000100";
         wait for CLK_PERIOD;
-        read_command_tb <= '0';
-        
+        read_command_tb <= '1'; wait for CLK_PERIOD; read_command_tb <= '0';
         wait for CLK_PERIOD;
-        assert sw_index_tb = "0010" and read_valid_tb = '1' 
-            report "ERREUR Test 2: L'index pour SW2 est incorrect." severity error;
-        
+        assert sw_index_tb = "0010" and read_valid_tb = '1' report "ERREUR Test 2" severity error;
         wait for CLK_PERIOD;
-        assert read_valid_tb = '0' 
-            report "ERREUR Test 2: read_valid n'est pas une impulsion." severity error;
+        assert read_valid_tb = '0' report "ERREUR Test 2: read_valid n'est pas une impulsion." severity error;
         report "Test 2: OK.";
 
-        -- Test 3: Lecture de SW9. Index attendu: 9 ("1001").
+        -- Test 3: Lecture de SW9 (cas valide).
         report "Test 3: Lecture de SW9.";
-        sw_i_tb <= "1000000000"; -- 1. On prépare l'entrée
-        wait for CLK_PERIOD;    -- 2. On attend
-        
-        read_command_tb <= '1'; -- 3. On envoie la commande
+        sw_i_tb <= "1000000000";
         wait for CLK_PERIOD;
-        read_command_tb <= '0';
+        read_command_tb <= '1'; wait for CLK_PERIOD; read_command_tb <= '0';
         wait for CLK_PERIOD;
-        
-        assert sw_index_tb = "1001" and read_valid_tb = '1' 
-            report "ERREUR Test 3: L'index pour SW9 est incorrect." severity error;
+        assert sw_index_tb = "1001" and read_valid_tb = '1' report "ERREUR Test 3" severity error;
         report "Test 3: OK.";
         
         -- Test 4: Pas de commande. La sortie ne doit pas changer.
         report "Test 4: Changement de SW sans commande.";
         sw_i_tb <= "0000000001";
         wait for 100 ns;
-        
-        assert sw_index_tb = "1001" 
-            report "ERREUR Test 4: L'index a change sans commande." severity error;
+        assert sw_index_tb = "1001" report "ERREUR Test 4: L'index a change sans commande." severity error;
         report "Test 4: OK.";
+
+        -- Test 5: Commande avec entrée invalide (aucun switch).
+        report "Test 5: Commande avec entree invalide (aucun switch).";
+        sw_i_tb <= "0000000000";
+        wait for CLK_PERIOD;
+        read_command_tb <= '1'; wait for CLK_PERIOD; read_command_tb <= '0';
+        wait for CLK_PERIOD;
+        assert read_valid_tb = '0' report "ERREUR Test 5" severity error;
+        report "Test 5: OK.";
+
+        -- *** NOUVEAU TEST AJOUTÉ ***
+        -- Test 6: Commande avec entrée invalide (plusieurs switches -> "1111").
+        report "Test 6: Commande avec entree invalide (plusieurs switches).";
+        sw_i_tb <= "0000001100"; -- SW2 et SW3 activés -> cas 'others'
+        wait for CLK_PERIOD;
+        
+        read_command_tb <= '1';
+        wait for CLK_PERIOD;
+        read_command_tb <= '0';
+        wait for CLK_PERIOD;
+
+        -- On vérifie que read_valid est bien resté à '0' car index_comb était "1111"
+        assert read_valid_tb = '0'
+            report "ERREUR Test 6: read_valid est passe a '1' pour une entree multiple." severity error;
+        report "Test 6: OK.";
 
         report "--- TOUS LES TESTS ONT REUSSI ---" severity note;
         wait;
