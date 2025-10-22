@@ -2,10 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity tb_simon is
+entity tb_simon_complet is
 end entity;
 
-architecture test of tb_simon is
+architecture test of tb_simon_complet is
 
     -- 1. Déclaration du composant à tester (DUT)
     component simon is
@@ -28,153 +28,116 @@ architecture test of tb_simon is
     signal clk_tb     : std_logic := '0';
     signal reset_n_tb : std_logic := '1'; -- Actif bas
     signal sw_tb      : std_logic_vector(9 downto 0) := (others => '0');
-    signal key_tb     : std_logic_vector(3 downto 0) := (others => '1'); -- Boutons relâchés (haut)
+    signal key_tb     : std_logic_vector(3 downto 0) := (others => '1');
     signal ledr_tb    : std_logic_vector(9 downto 0);
-    signal hex0_tb    : std_logic_vector(6 downto 0);
-    signal hex1_tb    : std_logic_vector(6 downto 0);
-    signal hex2_tb    : std_logic_vector(6 downto 0);
-    signal hex3_tb    : std_logic_vector(6 downto 0);
-    signal hex4_tb    : std_logic_vector(6 downto 0);
-    signal hex5_tb    : std_logic_vector(6 downto 0);
+    signal hex0_tb, hex1_tb, hex2_tb, hex3_tb, hex4_tb, hex5_tb : std_logic_vector(6 downto 0);
 
     -- Constantes
-    constant CLK_PERIOD      : time := 20 ns; -- 50 MHz
-    constant DISPLAY_TIME    : time := 500 ms;
-    constant PLAYER_WAIT_TIME: time := 100 ms;
-
-    -- ** CORRECTION : Définition du type AVANT utilisation **
-    subtype index_range is integer range 0 to 9;
-    type integer_vector is array (index_range range <>) of integer;
-
-    -- Séquence attendue (basée sur hard_seq_generator)
-    constant EXPECTED_SEQ : integer_vector(0 to 9) := (0, 1, 2, 8, 9, 1, 2, 3, 7, 8);
+    constant CLK_PERIOD   : time := 20 ns; -- 50 MHz
+    
+    -- Séquence attendue (copiée de hard_seq_generator.vhd)
+    constant EXPECTED_SEQ : array (0 to 9) of integer := (0, 1, 2, 8, 9, 1, 2, 3, 7, 8);
 
 begin
 
     -- 3. Instanciation du DUT
     uut: simon
         port map (
-            CLOCK_50 => clk_tb,
-            RESET_N  => reset_n_tb,
-            SW       => sw_tb,
-            KEY      => key_tb,
-            LEDR     => ledr_tb,
-            HEX0     => hex0_tb,
-            HEX1     => hex1_tb,
-            HEX2     => hex2_tb,
-            HEX3     => hex3_tb,
-            HEX4     => hex4_tb,
-            HEX5     => hex5_tb
+            CLOCK_50 => clk_tb, RESET_N  => reset_n_tb, SW => sw_tb, KEY => key_tb,
+            LEDR => ledr_tb, HEX0 => hex0_tb, HEX1 => hex1_tb, HEX2 => hex2_tb,
+            HEX3 => hex3_tb, HEX4 => hex4_tb, HEX5 => hex5_tb
         );
 
     -- 4. Processus d'horloge
     clk_process: process
     begin
-        clk_tb <= '0'; wait for CLK_PERIOD / 2;
-        clk_tb <= '1'; wait for CLK_PERIOD / 2;
+        clk_tb <= not clk_tb;
+        wait for CLK_PERIOD / 2;
     end process;
 
     -- 5. Processus de stimulation
     stim_proc: process
-
-        procedure press_key(key_index : integer) is
+        procedure press_key(key_index : integer; duration_ms : integer := 4) is
         begin
-            report "Appui KEY(" & integer'image(key_index) & ")";
+            report "Appui sur KEY(" & integer'image(key_index) & ")";
             key_tb(key_index) <= '0';
-            wait for CLK_PERIOD * 2;
+            wait for duration_ms * 1 ms;
             key_tb(key_index) <= '1';
-            wait for CLK_PERIOD;
+            wait for 1 ms;
         end procedure;
 
         procedure set_switch(sw_index : integer) is
             variable sw_vector : std_logic_vector(9 downto 0) := (others => '0');
         begin
-             report "Activation SW(" & integer'image(sw_index) & ")";
-            if sw_index >= 0 and sw_index <= 9 then
+             report "Activation de SW(" & integer'image(sw_index) & ")";
+             if sw_index >= 0 and sw_index <= 9 then
                 sw_vector(sw_index) := '1';
-            end if;
+             end if;
             sw_tb <= sw_vector;
-            wait for CLK_PERIOD;
-        end procedure;
-
-        procedure wait_cycles(cycles : integer) is
-        begin
-            wait for CLK_PERIOD * cycles;
         end procedure;
 
     begin
-        report "--- Debut du testbench SIMPLIFIE pour simon ---";
-
+        report "--- DEBUT DU TESTBENCH COMPLET POUR SIMON ---";
+        
         -- == 1. Reset ==
-        report "Phase 1: Reset...";
+        report "ETAPE 1: Reset du systeme...";
         reset_n_tb <= '0';
         sw_tb      <= (others => '0');
         key_tb     <= (others => '1');
         wait for 100 ns;
         reset_n_tb <= '1';
-        wait_cycles(5);
-        report "Phase 1: Reset termine.";
+        wait for 1 us;
+        report "ETAPE 1: Reset termine.";
 
         -- == 2. Démarrage du jeu ==
-        report "Phase 2: Demarrage du jeu...";
+        report "ETAPE 2: Demarrage du jeu...";
         press_key(0); -- Appui sur KEY0 (Start)
-        report "Phase 2: Bouton Start appuye.";
-        wait_cycles(10);
+        report "ETAPE 2: Bouton Start appuye.";
+        wait for 100 ms;
 
-        -- == 3. Niveau 1 (step=0) ==
-        report "Phase 3: Niveau 1...";
-        report " Attente affichage LED...";
-        wait until ledr_tb /= "0000000000"; report " LED allumee. Attente extinction...";
-        wait until ledr_tb = "0000000000";  report " LED eteinte. Attente fin periode OFF...";
-        -- ** Note: Les attentes basées sur des temps absolus peuvent être fragiles.
-        --   Une attente basée sur les signaux de valid serait plus robuste si possible.
-        wait for 300 ms; -- Attendre la fin de la période OFF + marge
-        report " Fin periode OFF. Phase Joueur...";
-
+        -- == 3. NIVEAU 1 (step=0) - REUSSITE ==
+        report "ETAPE 3: Niveau 1 (doit reussir)...";
+        report " Attente affichage LED 0...";
+        wait until ledr_tb(EXPECTED_SEQ(0)) = '1'; report " LED 0 allumee.";
+        wait until ledr_tb(EXPECTED_SEQ(0)) = '0'; report " LED 0 eteinte.";
+        
+        report " Phase Joueur...";
         set_switch(EXPECTED_SEQ(0));
         press_key(1); -- Valider
         report " Reponse Niveau 1 envoyee.";
-        wait_cycles(10);
+        wait for 100 ms;
 
-        -- == 4. Niveau 2 (step=1) - ERREUR ==
-        report "Phase 4: Niveau 2...";
-        report " Attente affichage LED 1/2...";
-        wait until ledr_tb /= "0000000000"; report " LED 1/2 allumee.";
-        wait until ledr_tb = "0000000000";  report " LED 1/2 eteinte.";
-        wait for 300 ms; report " Fin OFF 1/2.";
-
-        report " Attente affichage LED 2/2...";
-        wait until ledr_tb /= "0000000000"; report " LED 2/2 allumee.";
-        wait until ledr_tb = "0000000000";  report " LED 2/2 eteinte.";
-        wait for 300 ms; report " Fin OFF 2/2. Phase Joueur...";
-
-        -- Joueur: Etape 1 (Correct)
+        -- == 4. NIVEAU 2 (step=1) - ECHEC ==
+        report "ETAPE 4: Niveau 2 (doit echouer)...";
+        -- Phase affichage
+        report " Attente affichage LED 0...";
+        wait until ledr_tb(EXPECTED_SEQ(0)) = '1'; report " LED 0 allumee.";
+        wait until ledr_tb(EXPECTED_SEQ(0)) = '0'; report " LED 0 eteinte.";
+        report " Attente affichage LED 1...";
+        wait until ledr_tb(EXPECTED_SEQ(1)) = '1'; report " LED 1 allumee.";
+        wait until ledr_tb(EXPECTED_SEQ(1)) = '0'; report " LED 1 eteinte.";
+        
+        report " Phase Joueur...";
+        -- Joueur: Etape 1 (Correcte)
         set_switch(EXPECTED_SEQ(0));
         press_key(1);
         report " Reponse Niveau 2, Etape 1 (Correcte) envoyee.";
-        wait_cycles(10);
-
-        -- Joueur: Etape 2 (Incorrect)
+        wait for 100 ms;
+        
+        -- Joueur: Etape 2 (Incorrecte)
         report " Simulation Erreur Etape 2...";
-        -- ** CORRECTION : Logique OK car EXPECTED_SEQ est maintenant bien défini **
-        if EXPECTED_SEQ(1) < 9 then
-             set_switch(EXPECTED_SEQ(1) + 1); -- ERREUR
-        else
-             set_switch(EXPECTED_SEQ(1) - 1); -- ERREUR
-        end if;
+        set_switch(EXPECTED_SEQ(1) + 2); -- Erreur volontaire
         press_key(1);
         report " Reponse Niveau 2, Etape 2 (Incorrecte) envoyee.";
-        wait_cycles(10);
+        wait for 100 ms;
 
         -- == 5. Vérification Game Over ==
-        report "Phase 5: Attente de l'animation Game Over...";
-        -- ** CORRECTION : Utilisation de 'ms' ou 'ns' **
-        wait for 3000 ms; -- Attendre 3 secondes
-        report "Phase 5: Verification visuelle de l'animation Game Over terminee.";
-
-        report "--- Fin du testbench SIMPLIFIE ---";
+        report "ETAPE 5: Attente de l'animation Game Over...";
+        wait for 3000 ms; -- Attendre 3 secondes pour voir l'animation
+        report "ETAPE 5: Animation Game Over terminee (verification visuelle).";
+        
+        report "--- FIN DE LA SIMULATION ---";
         wait;
     end process stim_proc;
-
 
 end architecture test;
