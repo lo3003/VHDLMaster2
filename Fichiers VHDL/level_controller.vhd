@@ -1,3 +1,4 @@
+
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
@@ -24,16 +25,16 @@ architecture Behavioral of level_controller is
     -- Format : OFF (5 bits) & ON (5 bits)
 
     -- Niveau Facile: 500ms ON / 500ms OFF
-    constant EASY_ON_TIME    : unsigned(4 downto 0) := to_unsigned(5, 5); -- 5 * 100ms
-    constant EASY_OFF_TIME   : unsigned(4 downto 0) := to_unsigned(5, 5); -- 5 * 100ms
+    constant EASY_ON_TIME    : unsigned(4 downto 0) := to_unsigned(15, 5); -- 15 * 100ms
+    constant EASY_OFF_TIME   : unsigned(4 downto 0) := to_unsigned(15, 5); -- 15 * 100ms
 
     -- Niveau Moyen: 200ms ON / 200ms OFF
-    constant MEDIUM_ON_TIME  : unsigned(4 downto 0) := to_unsigned(2, 5); -- 2 * 100ms
-    constant MEDIUM_OFF_TIME : unsigned(4 downto 0) := to_unsigned(2, 5); -- 2 * 100ms
+    constant MEDIUM_ON_TIME  : unsigned(4 downto 0) := to_unsigned(10, 5); -- 10 * 100ms
+    constant MEDIUM_OFF_TIME : unsigned(4 downto 0) := to_unsigned(10, 5); -- 10 * 100ms
 
     -- Niveau Difficile: 100ms ON / 100ms OFF
-    constant HARD_ON_TIME    : unsigned(4 downto 0) := to_unsigned(1, 5); -- 1 * 100ms
-    constant HARD_OFF_TIME   : unsigned(4 downto 0) := to_unsigned(1, 5); -- 1 * 100ms
+    constant HARD_ON_TIME    : unsigned(4 downto 0) := to_unsigned(5, 5); -- 5 * 100ms
+    constant HARD_OFF_TIME   : unsigned(4 downto 0) := to_unsigned(5, 5); -- 5 * 100ms
 
     -- Signal interne pour mémoriser le niveau actuel
     signal level_reg : unsigned(1 downto 0) := "00"; -- "00"=Facile, "01"=Moyen, "10"=Difficile
