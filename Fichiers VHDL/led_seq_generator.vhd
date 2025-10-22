@@ -33,7 +33,7 @@ architecture rtl of led_seq_generator is
 begin
     process(clk,reset)
     begin
-		  if reset = '0' or show_command = '0' then
+		  if reset = '1' or show_command = '0' then
 				state <= st_off;
             timer <= (others => '0');
 				prescaler <= to_unsigned(4999999,23); -- Compteur initialisé à 4999999 afin de trigger immédiatement un tick
