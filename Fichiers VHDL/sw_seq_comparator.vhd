@@ -14,7 +14,6 @@ entity sw_seq_comparator is
         seq_value       : in  unsigned(3 downto 0);
         latch_valid     : out std_logic;
         compare_command : in  std_logic;
-        step            : in  unsigned(3 downto 0);
         sw_index        : in  unsigned(3 downto 0);
         compare_valid   : out std_logic;
         match_error     : out std_logic
@@ -56,7 +55,7 @@ begin
                 -- === Priorité n°3 : Commande de comparaison ===
                 if compare_command = '1' then
                     -- La comparaison se fait ici, de manière synchrone et sûre
-                    if sw_index /= seq_mem_reg(to_integer(step)) then
+                    if sw_index /= seq_mem_reg(to_integer(index)) then
                         match_error_reg <= '1';
                     else
                         match_error_reg <= '0';
