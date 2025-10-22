@@ -64,7 +64,7 @@ begin
                 read_valid <= '0';
             else
                 -- Si on reçoit la commande, on met à jour les sorties
-                if read_command = '1' then
+                if read_command = '1' and index_comb /= "1111" then
                     sw_index   <= index_comb; -- On enregistre l'index calculé
                     read_valid <= '1';        -- On active la validation
                 else
