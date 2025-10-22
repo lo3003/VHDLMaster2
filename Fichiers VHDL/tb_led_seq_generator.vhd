@@ -2,10 +2,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity tb_led_seq_generator is
+entity led_seq_generator_tb is
 end entity;
 
-architecture test of tb_led_seq_generator is
+architecture test of led_seq_generator_tb is
 
     -- 1. Déclaration du composant à tester (DUT) mise à jour
     component led_seq_generator is
@@ -22,7 +22,7 @@ architecture test of tb_led_seq_generator is
 
     -- 2. Signaux pour connecter au DUT (mis à jour)
     signal tb_clk          : std_logic := '0';
-    signal tb_reset        : std_logic := '0';
+    signal tb_reset        : std_logic := '1';
     signal tb_show_command : std_logic := '0';
     signal tb_seq_value    : unsigned(3 downto 0) := (others => '0');
     signal tb_on_off_times : std_logic_vector(9 downto 0) := (others => '0');
@@ -62,17 +62,17 @@ begin
 
         -- **SCENARIO 1: Reset et état initial**
         report "TEST 1: Reset et module désactivé." severity note;
-        tb_reset <= '0';
+        tb_reset <= '1';
         tb_show_command <= '0';
         wait for 100 ns; -- Maintenir le reset actif
-        tb_reset <= '1';
+        tb_reset <= '0';
         wait for CLK_PERIOD;
         
         -- On vérifie que les LEDs sont bien éteintes après le reset
         assert tb_led_o = "0000000000" report "ERREUR TEST 1: Les LEDs ne sont pas éteintes après le reset." severity error;
 
         -- **SCENARIO 2: Allumage simple (300ms ON / 200ms OFF)**
-        report "TEST 2: Allumage de la LED 5 (300ms ON / 200ms OFF)." severity note;
+        report "TEST 2: Allumage de la LED 5 (200ms ON / 200ms OFF)." severity note;
         
         -- Configuration:
         -- Temps ON = 1 (1 * 100ms), Temps OFF = 1 (1 * 100ms)
@@ -89,12 +89,12 @@ begin
         assert tb_led_o = "0000100000" report "ERREUR TEST 2: La LED 5 ne s'est pas allumée." severity error;
 
         -- Attendre la fin de la période ON et vérifier l'extinction
-        wait for 50 ms; -- On complète les 300 ms
+        wait for 150 ms; -- On complète les 200 ms
         wait for CLK_PERIOD;
         assert tb_led_o = "0000000000" report "ERREUR TEST 2: La LED 5 ne s'est pas éteinte." severity error;
         
         -- Attendre la fin de la période OFF et vérifier le ré-allumage
-        wait for 100 ms; -- On attend les 200 ms
+        wait for 200 ms; -- On attend les 200 ms
         wait for CLK_PERIOD;
         assert tb_led_o = "0000100000" report "ERREUR TEST 2: La LED 5 ne s'est pas rallumée." severity error;
         
@@ -102,4 +102,3 @@ begin
         wait; -- Stoppe la simulation
     end process;
 end architecture;
-
