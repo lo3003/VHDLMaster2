@@ -3,10 +3,10 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 -- =============================================================================
--- ENTITY: led_game_state_tb
+-- ENTITY: tb_led_game_state_updated
 -- DESCRIPTION:
---   Testbench for the led_game_state module. It verifies the reset,
---   the defeat animation (blinking), and the victory animation (scrolling).
+--   Testbench mis à jour pour le module led_game_state. Il vérifie le reset,
+--   l'animation de défaite (game_over='1'), et l'animation de victoire (game_over='0').
 -- =============================================================================
 entity tb_led_game_state is
 end entity tb_led_game_state;
@@ -56,11 +56,11 @@ begin
     end process;
 
     -- =========================================================================
-    -- SCENARIO DE TEST
+    -- SCENARIO DE TEST MIS À JOUR
     -- =========================================================================
     stim_proc: process
     begin
-        report "--- Debut du testbench pour led_game_state ---";
+        report "--- Debut du testbench mis a jour pour led_game_state ---";
         
         -- 1. Apply reset to ensure a clean start
         reset_tb <= '1';
@@ -69,30 +69,28 @@ begin
         wait for 20 ns;
         report "Test 1: Reset termine. Le module est en attente (IDLE).";
 
+        -- *** MODIFIÉ ***
         -- 2. Trigger the DEFEAT animation (blinking 3 times)
-        report "Test 2: Declenchement de l'animation de defaite (game_over='0').";
-        game_over_tb        <= '0';
-        led_game_command_tb <= '1'; -- Send a one-cycle pulse to start the animation
+        report "Test 2: Declenchement de l'animation de defaite (game_over='1').";
+        game_over_tb        <= '1'; -- '1' = Défaite
+        led_game_command_tb <= '1';
         wait for CLK_PERIOD;
         led_game_command_tb <= '0';
         
-        -- Wait for the animation to complete.
-        -- This will take approximately 1.5 seconds in simulation (3 * 2 * 250ms).
-        report "--> Observation de l'animation de clignotement (3 fois)...";
+        report "--> Observation de l'animation de clignotement...";
         wait until led_game_valid_tb = '1';
         report "Test 2: Animation de defaite terminee.";
         wait for 1 us; -- Small pause between tests
 
+        -- *** MODIFIÉ ***
         -- 3. Trigger the VICTORY animation (scrolling twice)
-        report "Test 3: Declenchement de l'animation de victoire (game_over='1').";
-        game_over_tb        <= '1';
-        led_game_command_tb <= '1'; -- Send a pulse to start
+        report "Test 3: Declenchement de l'animation de victoire (game_over='0').";
+        game_over_tb        <= '0'; -- '0' = Victoire
+        led_game_command_tb <= '1';
         wait for CLK_PERIOD;
         led_game_command_tb <= '0';
         
-        -- Wait for the animation to complete.
-        -- This will take approximately 1 second in simulation (2 * 10 * 50ms).
-        report "--> Observation de l'animation du chenillard (2 fois)...";
+        report "--> Observation de l'animation du chenillard...";
         wait until led_game_valid_tb = '1';
         report "Test 3: Animation de victoire terminee.";
         
