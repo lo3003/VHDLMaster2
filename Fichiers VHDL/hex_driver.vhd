@@ -20,7 +20,7 @@ end entity hex_driver;
 
 architecture Behavioral of hex_driver is
 
-    -- Fonction de conversion (inchangée)
+    -- La fonction de conversion reste utile pour les chiffres
     function to_7seg(d : unsigned(3 downto 0)) return std_logic_vector is
     begin
         case d is
@@ -42,21 +42,21 @@ begin
     -- =========================================================================
 
     -- Afficheurs pour le SCORE ACTUEL (HEX1 et HEX0)
-    HEX1 <= to_7seg(resize(score / 10, 4)); -- Dizaines
-    HEX0 <= to_7seg(resize(score mod 10, 4)); -- Unités
+    HEX5 <= to_7seg(resize(score / 10, 4)); -- Dizaines
+    HEX4 <= to_7seg(resize(score mod 10, 4)); -- Unités
 
     -- Afficheurs pour le MEILLEUR SCORE (HEX5 et HEX4)
-    HEX5 <= to_7seg(resize(best_score / 10, 4)); -- Dizaines
-    HEX4 <= to_7seg(resize(best_score mod 10, 4)); -- Unités
+    HEX1 <= to_7seg(resize(best_score / 10, 4)); -- Dizaines
+    HEX0 <= to_7seg(resize(best_score mod 10, 4)); -- Unités
 
-    -- Afficheur pour le NIVEAU (HEX3)
-    HEX3 <= to_7seg("1010") when level = "00" else     -- 'A' (Facile)
-            to_7seg("1011") when level = "01" else     -- 'b' (Moyen)
-            to_7seg("1101") when level = "10" else     -- 'd' (Difficile)
-            "1111111";                                -- Blank
+    -- **MODIFIÉ** : Afficheur pour le NIVEAU (HEX3)
+    HEX2 <= "0000110" when level = "00" else  -- 'E' (Easy)
+            "1000111" when level = "01" else  -- 'L' (Medium)
+            "0011000" when level = "10" else  -- 'H' (Hard)
+            "1111111";                        -- Blank
 
-    -- Afficheur pour le MODE (HEX2)
-    HEX2 <= to_7seg("1100") when mode = '0' else       -- 'C' (Classique)
-            to_7seg("1110");                          -- 'E' (Flash)
+    -- **MODIFIÉ** : Afficheur pour le MODE (HEX2)
+    HEX3 <= to_7seg("1100") when mode = '0' else  -- 'C' (Classique)
+            "0001110";                          -- 'F' (Flash)
 
 end architecture Behavioral;
